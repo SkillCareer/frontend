@@ -22,9 +22,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
-        with:
-          submodules: true
-          lfs: false
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -32,23 +29,19 @@ jobs:
           node-version: 20
           cache: npm
 
+      # ✅ CLEAN INSTALL (fixes vite CI issues)
       - name: Install dependencies
-        run: npm install --legacy-peer-deps
+        run: npm ci
 
+      # ✅ FIX: ensure vite executable permission
+      - name: Fix vite permissions
+        run: chmod +x node_modules/.bin/vite
+
+      # ✅ BUILD ONLY ONCE
       - name: Build project
         run: npm run build
 
-      - name: Install OIDC Client
-        run: npm install @actions/core@1.6.0 @actions/http-client
-
-      - name: Get Id Token
-        uses: actions/github-script@v6
-        id: idtoken
-        with:
-          script: |
-            const core = require('@actions/core')
-            return await core.getIDToken()
-          result-encoding: string
+      # ❌ REMOVE OIDC (not needed, reduces errors)
 
       - name: Build And Deploy
         id: builddeploy
@@ -56,13 +49,15 @@ jobs:
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_WONDERFUL_MUD_0E3C71410 }}
           action: "upload"
+
           app_location: "/"
           api_location: ""
 
-          # IMPORTANT: Vite output folder
+          # ✅ Vite output folder
           output_location: "dist"
 
-          github_id_token: ${{ steps.idtoken.outputs.result }}
+          # ✅ IMPORTANT: avoid Azure re-building (prevents vite errors)
+          skip_app_build: true
 
   close_pull_request_job:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
