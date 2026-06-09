@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Setup Node.js
@@ -19,23 +19,17 @@ jobs:
         with:
           node-version: '20.x'
 
-      # 🔥 CLEAN + FULL INSTALL (fixes vite issue)
       - name: Install dependencies
         run: npm ci
 
-      # 🔥 FIX: ensure vite binary is executable
-      - name: Fix vite permissions
-        run: chmod +x node_modules/.bin/vite
-
-      # 🔥 BUILD FRONTEND
       - name: Build project
         run: npm run build
 
-      # 🔥 Upload ONLY build output
-      - name: Upload artifact
+      # ✅ FIX: upload correct dist folder only
+      - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: frontend-build
+          name: dist
           path: dist
 
   deploy:
@@ -43,12 +37,14 @@ jobs:
     needs: build
 
     steps:
-      - name: Download artifact
+      # ✅ FIX: download into correct folder
+      - name: Download build artifact
         uses: actions/download-artifact@v4
         with:
-          name: frontend-build
+          name: dist
+          path: dist
 
-      # 🔥 DEPLOY TO AZURE APP SERVICE
+      # 🔥 DEPLOY ONLY dist
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
         with:
