@@ -1,0 +1,72 @@
+name: Azure Static Web Apps CI/CD
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+    branches:
+      - main
+
+jobs:
+  build_and_deploy_job:
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
+    runs-on: ubuntu-latest
+    name: Build and Deploy Job
+
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      # ✅ CLEAN INSTALL (fixes vite CI issues)
+      - name: Install dependencies
+        run: npm ci
+
+      # ✅ FIX: ensure vite executable permission
+      - name: Fix vite permissions
+        run: chmod +x node_modules/.bin/vite
+
+      # ✅ BUILD ONLY ONCE
+      - name: Build project
+        run: npm run build
+
+      # ❌ REMOVE OIDC (not needed, reduces errors)
+
+      - name: Build And Deploy
+        id: builddeploy
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_WONDERFUL_MUD_0E3C71410 }}
+          action: "upload"
+
+          app_location: "/"
+          api_location: ""
+
+          # ✅ Vite output folder
+          output_location: "dist"
+
+          # ✅ IMPORTANT: avoid Azure re-building (prevents vite errors)
+          skip_app_build: true
+
+  close_pull_request_job:
+    if: github.event_name == 'pull_request' && github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    name: Close Pull Request Job
+
+    steps:
+      - name: Close Pull Request
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          action: "close"
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_WONDERFUL_MUD_0E3C71410 }}
