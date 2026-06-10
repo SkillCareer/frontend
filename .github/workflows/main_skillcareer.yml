@@ -22,6 +22,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Fix Vite executable permission
+        run: chmod +x node_modules/.bin/vite
+
       - name: Build project
         run: npm run build
 
